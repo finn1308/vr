@@ -1,38 +1,162 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tranh AR - 28 Ảnh Hệ Thống</title>
+  
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background-color: #000;
+    }
+
+    #ui-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #start-btn {
+      padding: 15px 40px;
+      font-size: 20px;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(45deg, #fe2c55, #ff1493);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 20, 147, 0.4);
+      display: none; /* Hiện sau khi data sẵn sàng */
+    }
+
+    #loading-text {
+      margin-bottom: 20px;
+      font-size: 18px;
+      color: #ff1493;
+    }
+
+    #scanning-status {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 100;
+      display: none;
+    }
+  </style>
 </head>
+<body>
 
-<body style="margin:0">
+  <div id="ui-overlay">
+    <div id="loading-text">Đang nạp 28 dữ liệu AR...</div>
+    <button id="start-btn">BẮT ĐẦU TRẢI NGHIỆM</button>
+  </div>
 
-<a-scene 
-  mindar-image="imageTargetSrc: target.mind; maxTrack: 1"
-  embedded
-  color-space="sRGB"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false"
->
+  <div id="scanning-status">Sẵn sàng quét 28 ảnh</div>
 
-<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <a-scene 
+    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiScanning: no; maxTrack: 1;" 
+    color-space="sRGB" 
+    renderer="colorManagement: true, physicallyCorrectLights" 
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false">
+    
+    <a-assets id="assets-container">
+      <!-- Chúng ta sẽ dùng 1 thẻ video chung để tiết kiệm RAM điện thoại -->
+      <video id="ar-video" 
+             src="" 
+             crossorigin="anonymous" 
+             loop="true" 
+             playsinline 
+             webkit-playsinline>
+      </video>
+    </a-assets>
 
-<!-- CHỈ 1 TARGET -->
-<a-entity mindar-image-target="targetIndex: 0">
-  <a-video 
-    src="#video"
-    width="1"
-    height="0.6"
-    position="0 0 0">
-  </a-video>
-</a-entity>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-</a-scene>
+    <!-- Container này sẽ chứa 28 thực thể AR được tạo tự động bằng JS -->
+    <a-entity id="targets-wrapper"></a-entity>
+    
+  </a-scene>
 
-<!-- video -->
-<video id="video" src="video.mp4" autoplay loop muted playsinline></video>
+  <script>
+    const TOTAL_IMAGES = 28;
+    const startBtn = document.querySelector("#start-btn");
+    const uiOverlay = document.querySelector("#ui-overlay");
+    const loadingText = document.querySelector("#loading-text");
+    const sceneEl = document.querySelector('a-scene');
+    const videoEl = document.querySelector('#ar-video');
+    const wrapper = document.querySelector('#targets-wrapper');
 
+    // Tự động tạo 28 Target
+    for (let i = 0; i < TOTAL_IMAGES; i++) {
+      const entity = document.createElement('a-entity');
+      entity.setAttribute('mindar-image-target', `targetIndex: ${i}`);
+      
+      const videoPlane = document.createElement('a-video');
+      videoPlane.setAttribute('src', '#ar-video');
+      videoPlane.setAttribute('position', '0 0 0');
+      // Tỉ lệ mặc định cho ảnh dọc giống Hồng Hạnh
+      videoPlane.setAttribute('width', '1');
+      videoPlane.setAttribute('height', '1.5');
+      
+      entity.appendChild(videoPlane);
+      
+      // Sự kiện khi tìm thấy từng ảnh
+      entity.addEventListener("targetFound", () => {
+        console.log("Tìm thấy ảnh số:", i);
+        document.querySelector("#scanning-status").innerText = `Đã nhận diện ảnh ${i + 1}`;
+        
+        /* Lưu ý: Nếu mỗi ảnh là 1 video khác nhau, 
+           hãy đặt tên video là 0.mp4, 1.mp4... 
+           và bỏ chú thích dòng dưới:
+        */
+        // videoEl.setAttribute('src', `${i}.mp4`); 
+        
+        // Nếu chỉ có 1 video cho tất cả thì dùng dòng dưới:
+        if (!videoEl.getAttribute('src')) videoEl.setAttribute('src', 'video.mp4');
+
+        videoEl.play();
+      });
+
+      entity.addEventListener("targetLost", () => {
+        videoEl.pause();
+        document.querySelector("#scanning-status").innerText = "Đang quét tìm hình ảnh...";
+      });
+
+      wrapper.appendChild(entity);
+    }
+
+    // Khi hệ thống MindAR sẵn sàng
+    sceneEl.addEventListener("ready", () => {
+      loadingText.innerText = "Dữ liệu 28 ảnh đã sẵn sàng!";
+      startBtn.style.display = "block";
+    });
+
+    startBtn.addEventListener("click", () => {
+      uiOverlay.style.display = "none";
+      document.querySelector("#scanning-status").style.display = "block";
+      sceneEl.systems["mindar-image-system"].start();
+    });
+  </script>
 </body>
 </html>
