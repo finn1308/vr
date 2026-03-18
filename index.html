@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Siêu Tốc - Chống Rung & Méo Hình</title>
+  <title>AR Siêu Tốc - Chống Rung Tuyệt Đối</title>
   
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
@@ -16,11 +16,10 @@
       background-color: #000;
     }
 
-    /* Màn hình khởi đầu chuyên nghiệp */
     #start-overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: radial-gradient(circle, #222, #000);
+      background: radial-gradient(circle, #1a1a1a, #000);
       z-index: 10000;
       display: flex;
       flex-direction: column;
@@ -32,57 +31,57 @@
     }
 
     #start-btn {
-      padding: 18px 60px;
-      font-size: 20px;
+      padding: 20px 70px;
+      font-size: 22px;
       background: #e91e63;
       border: none;
       border-radius: 50px;
       color: white;
       font-weight: bold;
-      box-shadow: 0 10px 30px rgba(233, 30, 99, 0.4);
-      margin-top: 20px;
-      transition: transform 0.2s;
+      box-shadow: 0 10px 40px rgba(233, 30, 99, 0.5);
+      margin-top: 25px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
     }
-
-    #start-btn:active { transform: scale(0.95); }
 
     #scanning-status {
       position: absolute;
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.85);
       color: #fff;
-      padding: 12px 30px;
+      padding: 12px 35px;
       border-radius: 40px;
       font-size: 14px;
       z-index: 100;
-      border: 1px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(10px);
+      border: 1px solid rgba(233, 30, 99, 0.3);
+      backdrop-filter: blur(15px);
       display: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
   </style>
 </head>
 <body>
 
   <div id="start-overlay">
-    <div style="font-size: 26px; font-weight: bold; letter-spacing: 1px;">TRẢI NGHIỆM AR</div>
-    <p style="margin: 10px 0; color: #aaa;">Vui lòng cấp quyền Camera khi được hỏi</p>
-    <button id="start-btn">BẮT ĐẦU</button>
+    <div style="font-size: 28px; font-weight: bold; color: #e91e63;">TRẢI NGHIỆM AR</div>
+    <p style="margin: 15px 0; color: #888; max-width: 80%;">Hướng camera vào ảnh để xem video tương ứng</p>
+    <button id="start-btn">Bắt đầu ngay</button>
   </div>
 
-  <div id="scanning-status">Đang tìm hình ảnh...</div>
+  <div id="scanning-status">Đang quét tìm hình ảnh...</div>
 
   <!-- 
-    TỐI ƯU CHỐNG RUNG (Smoothing):
-    - filterMinCF: Tăng lên 0.001 để giảm rung lắc li ti.
-    - filterBeta: Giảm xuống 10 để video không bị đuổi theo ảnh quá chậm.
-    - missTolerance: Cho phép mất dấu 5 khung hình mới ẩn video, giúp ổn định.
+    CẤU HÌNH CHỐNG RUNG TỐI ĐA:
+    - filterMinCF: 0.0001 (Cực thấp để loại bỏ rung lắc li ti từ cảm biến)
+    - filterBeta: 1000 (Tăng cao để video dính chặt vào vị trí đã nhận diện)
+    - missTolerance: 15 (Giữ video ổn định ngay cả khi camera rung mạnh trong 0.5s)
   -->
   <a-scene 
-    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiLoading: no; uiScanning: no; maxTrack: 1; filterMinCF: 0.001; filterBeta: 10; missTolerance: 5;" 
+    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiLoading: no; uiScanning: no; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 15;" 
     color-space="sRGB" 
-    renderer="colorManagement: true, antialias: true, precision: high;" 
+    renderer="colorManagement: true, antialias: true, precision: high, logarithmicDepthBuffer: true;" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
     
@@ -112,28 +111,31 @@
     const statusLabel = document.querySelector("#scanning-status");
     const startOverlay = document.querySelector("#start-overlay");
 
-    // Tỉ lệ chuẩn 1:1.5 cho ảnh chân dung (Portrait)
-    // Nếu ảnh bị méo, hãy điều chỉnh FIXED_HEIGHT ở đây
+    // Tỉ lệ cố định giúp 28 ảnh không bị méo (Cân chỉnh theo Portrait chuẩn)
     const FIXED_WIDTH = 1;
-    const FIXED_HEIGHT = 1.45; 
+    const FIXED_HEIGHT = 1.48; 
 
     const fragment = document.createDocumentFragment();
     for (let i = 0; i < TOTAL_IMAGES; i++) {
       const targetEntity = document.createElement('a-entity');
       targetEntity.setAttribute('mindar-image-target', `targetIndex: ${i}`);
       
+      // Tạo group trung gian để ổn định tọa độ
+      const videoGroup = document.createElement('a-entity');
+      
       const videoPlane = document.createElement('a-video');
       videoPlane.setAttribute('src', '#ar-video');
       videoPlane.setAttribute('width', FIXED_WIDTH);
       videoPlane.setAttribute('height', FIXED_HEIGHT);
       
-      // Vị trí: z=0.01 là đủ để không bị nháy, không nên quá cao để tránh cảm giác video bay lơ lửng
-      videoPlane.setAttribute('position', '0 0 0.01'); 
+      // z=0.02 để tránh lỗi nháy hình nhưng không quá cao gây cảm giác lơ lửng
+      videoPlane.setAttribute('position', '0 0 0.02'); 
       
-      targetEntity.appendChild(videoPlane);
+      videoGroup.appendChild(videoPlane);
+      targetEntity.appendChild(videoGroup);
 
       targetEntity.addEventListener("targetFound", () => {
-        statusLabel.innerText = "Đã nhận diện: " + (i + 1);
+        statusLabel.innerText = "Đã nhận diện ảnh: " + (i + 1);
         statusLabel.style.borderColor = "#e91e63";
         
         videoEl.muted = false;
@@ -145,8 +147,8 @@
 
       targetEntity.addEventListener("targetLost", () => {
         videoEl.pause();
-        statusLabel.innerText = "Đang quét tìm hình ảnh...";
-        statusLabel.style.borderColor = "rgba(255,255,255,0.2)";
+        statusLabel.innerText = "Đang tìm hình ảnh...";
+        statusLabel.style.borderColor = "rgba(233, 30, 99, 0.3)";
       });
 
       fragment.appendChild(targetEntity);
@@ -158,7 +160,10 @@
       setTimeout(() => { startOverlay.style.display = "none"; }, 400);
       statusLabel.style.display = "block";
       
+      // Kích hoạt hệ thống AR
       sceneEl.systems["mindar-image-system"].start();
+      
+      // Pre-load video
       videoEl.load();
       videoEl.play().then(() => {
         videoEl.pause();
@@ -167,8 +172,8 @@
     });
 
     sceneEl.addEventListener("arError", () => {
-      statusLabel.innerText = "Lỗi: Hãy mở bằng HTTPS và cho phép Camera!";
-      statusLabel.style.background = "#ff1744";
+      statusLabel.innerText = "Lỗi khởi tạo: Kiểm tra Camera và HTTPS!";
+      statusLabel.style.background = "#d32f2f";
     });
   </script>
 </body>
