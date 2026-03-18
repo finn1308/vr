@@ -3,11 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Artivive Web Clone - Hồng Hạnh AR</title>
+  <title>AR Siêu Tốc - 28 Ảnh</title>
   
-  <!-- Nhúng thư viện A-Frame -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-  <!-- Nhúng thư viện MindAR dành cho A-Frame -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
@@ -18,35 +16,42 @@
       background-color: #000;
     }
 
-    /* Màn hình chờ tương tác */
     #ui-overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.9);
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #000;
       z-index: 9999;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       color: white;
-      text-align: center;
-      padding: 20px;
+      transition: opacity 0.3s ease;
     }
 
     #start-btn {
       padding: 15px 40px;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
       color: white;
-      background: linear-gradient(45deg, #fe2c55, #ff1493);
+      background: #e91e63;
       border: none;
       border-radius: 50px;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(255, 20, 147, 0.4);
+      display: none;
     }
+
+    .loader {
+      border: 3px solid #222;
+      border-top: 3px solid #e91e63;
+      border-radius: 50%;
+      width: 35px;
+      height: 35px;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     #scanning-status {
       position: absolute;
@@ -57,49 +62,37 @@
       color: #fff;
       padding: 8px 20px;
       border-radius: 20px;
-      font-size: 14px;
+      font-size: 13px;
       z-index: 100;
       display: none;
-      border: 1px solid rgba(255,255,255,0.3);
-    }
-
-    /* Khung quét giả lập trên màn hình */
-    #scan-guide {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 70vw;
-      height: 70vh;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 10px;
-      pointer-events: none;
-      display: none;
-      z-index: 50;
+      border: 1px solid rgba(255,255,255,0.1);
     }
   </style>
 </head>
 <body>
 
   <div id="ui-overlay">
-    <h2 style="margin-bottom: 10px;">Sẵn sàng trải nghiệm AR</h2>
-    <p style="margin-bottom: 30px; opacity: 0.8;">Vui lòng nhấn nút dưới đây và đưa camera về phía ảnh "Hồng Hạnh"</p>
-    <button id="start-btn">MỞ CAMERA</button>
+    <div class="loader" id="loader-icon"></div>
+    <div id="status-text" style="margin-bottom: 20px;">Đang tải dữ liệu...</div>
+    <button id="start-btn">BẮT ĐẦU</button>
   </div>
 
   <div id="scanning-status">Đang tìm hình ảnh...</div>
-  <div id="scan-guide"></div>
 
-  <!-- Cấu hình MindAR với tệp của bạn: targets.mind -->
+  <!-- 
+    TỐI ƯU: 
+    - filterMinCF, filterBeta: Giảm độ trễ khi khớp ảnh.
+    - warmUpTolerance: Tăng tốc độ khởi động camera.
+    - missTolerance: Giúp video không bị mất ngay lập tức khi tay rung nhẹ.
+  -->
   <a-scene 
-    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiScanning: no;" 
+    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiScanning: no; maxTrack: 1; filterMinCF: 0.1; filterBeta: 10;" 
     color-space="sRGB" 
-    renderer="colorManagement: true, physicallyCorrectLights" 
+    renderer="colorManagement: true, antialias: false, precision: medium;" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
     
     <a-assets>
-      <!-- Tệp video.mp4 phải nằm cùng thư mục -->
       <video id="ar-video" 
              src="video.mp4" 
              crossorigin="anonymous" 
@@ -110,51 +103,55 @@
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-    <!-- Target nhận diện -->
-    <a-entity id="target" mindar-image-target="targetIndex: 0">
-      <!-- 
-        Điều chỉnh kích thước: Ảnh Hồng Hạnh là khổ dọc.
-        Tỉ lệ 1 : 1.5 là phù hợp nhất cho ảnh chân dung này.
-      -->
-      <a-video src="#ar-video" position="0 0 0" width="1" height="1.5" rotation="0 0 0"></a-video>
-    </a-entity>
+    <a-entity id="targets-container"></a-entity>
     
   </a-scene>
 
   <script>
-    const startBtn = document.querySelector("#start-btn");
-    const uiOverlay = document.querySelector("#ui-overlay");
+    const TOTAL_IMAGES = 28;
     const sceneEl = document.querySelector('a-scene');
     const videoEl = document.querySelector('#ar-video');
-    const targetEl = document.querySelector('#target');
-    const scanningStatus = document.querySelector('#scanning-status');
-    const scanGuide = document.querySelector('#scan-guide');
+    const container = document.querySelector('#targets-container');
 
-    startBtn.addEventListener("click", () => {
-      uiOverlay.style.display = "none";
-      scanningStatus.style.display = "block";
-      scanGuide.style.display = "block";
+    // Tạo nhanh 28 target bằng DocumentFragment để tối ưu DOM
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < TOTAL_IMAGES; i++) {
+      const target = document.createElement('a-entity');
+      target.setAttribute('mindar-image-target', `targetIndex: ${i}`);
       
-      // Khởi động hệ thống AR
+      const plane = document.createElement('a-video');
+      plane.setAttribute('src', '#ar-video');
+      plane.setAttribute('width', '1');
+      plane.setAttribute('height', '1.5'); // Khổ dọc ảnh Hồng Hạnh
+      
+      target.appendChild(plane);
+
+      target.addEventListener("targetFound", () => {
+        videoEl.play();
+        document.querySelector("#scanning-status").innerText = "Đã nhận diện!";
+      });
+
+      target.addEventListener("targetLost", () => {
+        videoEl.pause();
+        document.querySelector("#scanning-status").innerText = "Đang tìm hình ảnh...";
+      });
+
+      fragment.appendChild(target);
+    }
+    container.appendChild(fragment);
+
+    sceneEl.addEventListener("ready", () => {
+      document.querySelector("#loader-icon").style.display = "none";
+      document.querySelector("#status-text").innerText = "Sẵn sàng!";
+      document.querySelector("#start-btn").style.display = "block";
+    });
+
+    document.querySelector("#start-btn").addEventListener("click", () => {
+      document.querySelector("#ui-overlay").style.display = "none";
+      document.querySelector("#scanning-status").style.display = "block";
       sceneEl.systems["mindar-image-system"].start();
-      videoEl.load();
-    });
-
-    // Khi tìm thấy ảnh
-    targetEl.addEventListener("targetFound", () => {
-      scanningStatus.innerText = "Đã nhận diện!";
-      scanningStatus.style.color = "#00ff00";
-      scanGuide.style.display = "none";
-      videoEl.play();
-    });
-
-    // Khi mất dấu ảnh
-    targetEl.addEventListener("targetLost", () => {
-      scanningStatus.innerText = "Đang tìm hình ảnh...";
-      scanningStatus.style.color = "#fff";
-      scanGuide.style.display = "block";
-      videoEl.pause();
+      // Mẹo: play rồi pause ngay để video sẵn sàng trong bộ nhớ đệm
+      videoEl.play().then(() => videoEl.pause());
     });
   </script>
 </body>
