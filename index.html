@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR 28 Ảnh - Một Video Hệ Thống</title>
+  <title>Artivive Web Clone - Hồng Hạnh AR</title>
   
+  <!-- Nhúng thư viện A-Frame -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <!-- Nhúng thư viện MindAR dành cho A-Frame -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
@@ -16,11 +18,14 @@
       background-color: #000;
     }
 
-    /* Màn hình chờ khởi tạo */
+    /* Màn hình chờ tương tác */
     #ui-overlay {
       position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: #000;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
       z-index: 9999;
       display: flex;
       flex-direction: column;
@@ -29,77 +34,72 @@
       color: white;
       text-align: center;
       padding: 20px;
-      transition: opacity 0.5s ease;
     }
 
     #start-btn {
-      padding: 16px 45px;
-      font-size: 18px;
+      padding: 15px 40px;
+      font-size: 20px;
       font-weight: bold;
       color: white;
-      background: linear-gradient(45deg, #e91e63, #ff4081);
+      background: linear-gradient(45deg, #fe2c55, #ff1493);
       border: none;
       border-radius: 50px;
       cursor: pointer;
-      box-shadow: 0 4px 20px rgba(233, 30, 99, 0.4);
-      display: none; /* Hiện sau khi data sẵn sàng */
-    }
-
-    .loader {
-      border: 4px solid #222;
-      border-top: 4px solid #e91e63;
-      border-radius: 50%;
-      width: 45px;
-      height: 45px;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    #status-text {
-      margin-bottom: 25px;
-      font-size: 16px;
-      color: #bbb;
+      box-shadow: 0 4px 15px rgba(255, 20, 147, 0.4);
     }
 
     #scanning-status {
       position: absolute;
-      top: 25px;
+      top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.6);
       color: #fff;
-      padding: 10px 25px;
-      border-radius: 30px;
+      padding: 8px 20px;
+      border-radius: 20px;
       font-size: 14px;
       z-index: 100;
       display: none;
-      border: 1px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    /* Khung quét giả lập trên màn hình */
+    #scan-guide {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 70vw;
+      height: 70vh;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      pointer-events: none;
+      display: none;
+      z-index: 50;
     }
   </style>
 </head>
 <body>
 
   <div id="ui-overlay">
-    <div class="loader" id="loader-icon"></div>
-    <div id="status-text">Đang tải dữ liệu 28 mục tiêu...</div>
-    <button id="start-btn">BẮT ĐẦU QUÉT</button>
+    <h2 style="margin-bottom: 10px;">Sẵn sàng trải nghiệm AR</h2>
+    <p style="margin-bottom: 30px; opacity: 0.8;">Vui lòng nhấn nút dưới đây và đưa camera về phía ảnh "Hồng Hạnh"</p>
+    <button id="start-btn">MỞ CAMERA</button>
   </div>
 
-  <div id="scanning-status">Đang quét tìm hình ảnh...</div>
+  <div id="scanning-status">Đang tìm hình ảnh...</div>
+  <div id="scan-guide"></div>
 
-  <!-- maxTrack: 1 để tối ưu hiệu năng chỉ quét 1 ảnh 1 lúc -->
+  <!-- Cấu hình MindAR với tệp của bạn: targets.mind -->
   <a-scene 
-    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiScanning: no; maxTrack: 1;" 
+    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiScanning: no;" 
     color-space="sRGB" 
     renderer="colorManagement: true, physicallyCorrectLights" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
     
     <a-assets>
-      <!-- Video dùng chung cho 28 ảnh -->
+      <!-- Tệp video.mp4 phải nằm cùng thư mục -->
       <video id="ar-video" 
              src="video.mp4" 
              crossorigin="anonymous" 
@@ -111,70 +111,50 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Container cho các targets tự động -->
-    <a-entity id="targets-container"></a-entity>
+    <!-- Target nhận diện -->
+    <a-entity id="target" mindar-image-target="targetIndex: 0">
+      <!-- 
+        Điều chỉnh kích thước: Ảnh Hồng Hạnh là khổ dọc.
+        Tỉ lệ 1 : 1.5 là phù hợp nhất cho ảnh chân dung này.
+      -->
+      <a-video src="#ar-video" position="0 0 0" width="1" height="1.5" rotation="0 0 0"></a-video>
+    </a-entity>
     
   </a-scene>
 
   <script>
-    const TOTAL_IMAGES = 28;
     const startBtn = document.querySelector("#start-btn");
-    const loaderIcon = document.querySelector("#loader-icon");
-    const statusText = document.querySelector("#status-text");
     const uiOverlay = document.querySelector("#ui-overlay");
     const sceneEl = document.querySelector('a-scene');
     const videoEl = document.querySelector('#ar-video');
-    const container = document.querySelector('#targets-container');
-
-    // Tạo tự động 28 entity để nhận diện
-    for (let i = 0; i < TOTAL_IMAGES; i++) {
-      const targetEntity = document.createElement('a-entity');
-      targetEntity.setAttribute('mindar-image-target', `targetIndex: ${i}`);
-      
-      const videoPlane = document.createElement('a-video');
-      videoPlane.setAttribute('src', '#ar-video');
-      videoPlane.setAttribute('position', '0 0 0');
-      
-      // Tỉ lệ khổ dọc 2:3 (width=1, height=1.5)
-      videoPlane.setAttribute('width', '1');
-      videoPlane.setAttribute('height', '1.5');
-      
-      targetEntity.appendChild(videoPlane);
-      
-      // Sự kiện khi tìm thấy ảnh bất kỳ trong 28 ảnh
-      targetEntity.addEventListener("targetFound", () => {
-        console.log(`Đã nhận diện ảnh thứ ${i + 1}`);
-        document.querySelector("#scanning-status").innerText = `Đang phát video (Ảnh ${i + 1})`;
-        document.querySelector("#scanning-status").style.borderColor = "#e91e63";
-        
-        // Phát video chung
-        videoEl.play().catch(e => console.log("Yêu cầu tương tác trước khi phát âm thanh"));
-      });
-
-      targetEntity.addEventListener("targetLost", () => {
-        videoEl.pause();
-        document.querySelector("#scanning-status").innerText = "Đang quét tìm hình ảnh...";
-        document.querySelector("#scanning-status").style.borderColor = "rgba(255,255,255,0.2)";
-      });
-
-      container.appendChild(targetEntity);
-    }
-
-    // Khi MindAR đã load xong file .mind
-    sceneEl.addEventListener("ready", () => {
-      loaderIcon.style.display = "none";
-      statusText.innerText = "Hệ thống đã sẵn sàng!";
-      startBtn.style.display = "block";
-    });
+    const targetEl = document.querySelector('#target');
+    const scanningStatus = document.querySelector('#scanning-status');
+    const scanGuide = document.querySelector('#scan-guide');
 
     startBtn.addEventListener("click", () => {
-      uiOverlay.style.opacity = "0";
-      setTimeout(() => { uiOverlay.style.display = "none"; }, 500);
-      document.querySelector("#scanning-status").style.display = "block";
+      uiOverlay.style.display = "none";
+      scanningStatus.style.display = "block";
+      scanGuide.style.display = "block";
       
-      // Khởi động Camera và AR
+      // Khởi động hệ thống AR
       sceneEl.systems["mindar-image-system"].start();
       videoEl.load();
+    });
+
+    // Khi tìm thấy ảnh
+    targetEl.addEventListener("targetFound", () => {
+      scanningStatus.innerText = "Đã nhận diện!";
+      scanningStatus.style.color = "#00ff00";
+      scanGuide.style.display = "none";
+      videoEl.play();
+    });
+
+    // Khi mất dấu ảnh
+    targetEl.addEventListener("targetLost", () => {
+      scanningStatus.innerText = "Đang tìm hình ảnh...";
+      scanningStatus.style.color = "#fff";
+      scanGuide.style.display = "block";
+      videoEl.pause();
     });
   </script>
 </body>
