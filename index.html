@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Siêu Tốc - Chống Rung Tuyệt Đối</title>
+  <title>AR Siêu Tốc - Fix Lỗi Lệch Hình</title>
   
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
@@ -58,7 +58,6 @@
       border: 1px solid rgba(233, 30, 99, 0.3);
       backdrop-filter: blur(15px);
       display: none;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
   </style>
 </head>
@@ -73,13 +72,13 @@
   <div id="scanning-status">Đang quét tìm hình ảnh...</div>
 
   <!-- 
-    CẤU HÌNH CHỐNG RUNG TỐI ĐA:
-    - filterMinCF: 0.0001 (Cực thấp để loại bỏ rung lắc li ti từ cảm biến)
-    - filterBeta: 1000 (Tăng cao để video dính chặt vào vị trí đã nhận diện)
-    - missTolerance: 15 (Giữ video ổn định ngay cả khi camera rung mạnh trong 0.5s)
+    ĐIỀU CHỈNH CHỐNG RUNG CÂN BẰNG:
+    - filterMinCF: 0.001 (Tăng nhẹ để video bám sát ảnh hơn, giảm độ trễ)
+    - filterBeta: 10 (Giảm để tránh hiệu ứng video "đuổi theo" ảnh quá chậm)
+    - warmupTolerance: 7 (Đợi nhận diện ổn định trong 7 khung hình mới hiện video)
   -->
   <a-scene 
-    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiLoading: no; uiScanning: no; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 15;" 
+    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiLoading: no; uiScanning: no; maxTrack: 1; filterMinCF: 0.001; filterBeta: 10; warmupTolerance: 7; missTolerance: 10;" 
     color-space="sRGB" 
     renderer="colorManagement: true, antialias: true, precision: high, logarithmicDepthBuffer: true;" 
     vr-mode-ui="enabled: false" 
@@ -111,31 +110,26 @@
     const statusLabel = document.querySelector("#scanning-status");
     const startOverlay = document.querySelector("#start-overlay");
 
-    // Tỉ lệ cố định giúp 28 ảnh không bị méo (Cân chỉnh theo Portrait chuẩn)
-    const FIXED_WIDTH = 1;
-    const FIXED_HEIGHT = 1.48; 
-
     const fragment = document.createDocumentFragment();
     for (let i = 0; i < TOTAL_IMAGES; i++) {
       const targetEntity = document.createElement('a-entity');
       targetEntity.setAttribute('mindar-image-target', `targetIndex: ${i}`);
       
-      // Tạo group trung gian để ổn định tọa độ
-      const videoGroup = document.createElement('a-entity');
-      
       const videoPlane = document.createElement('a-video');
       videoPlane.setAttribute('src', '#ar-video');
-      videoPlane.setAttribute('width', FIXED_WIDTH);
-      videoPlane.setAttribute('height', FIXED_HEIGHT);
       
-      // z=0.02 để tránh lỗi nháy hình nhưng không quá cao gây cảm giác lơ lửng
-      videoPlane.setAttribute('position', '0 0 0.02'); 
+      /* QUAN TRỌNG: Không ép cứng chiều cao quá nhiều. 
+         Chúng ta sử dụng width=1 làm chuẩn, height sẽ tự thích ứng theo tỷ lệ ảnh mục tiêu 
+         được định nghĩa trong file .mind
+      */
+      videoPlane.setAttribute('width', '1');
+      videoPlane.setAttribute('height', '1.45'); // Tỉ lệ xấp xỉ Portrait
+      videoPlane.setAttribute('position', '0 0 0.01'); 
       
-      videoGroup.appendChild(videoPlane);
-      targetEntity.appendChild(videoGroup);
+      targetEntity.appendChild(videoPlane);
 
       targetEntity.addEventListener("targetFound", () => {
-        statusLabel.innerText = "Đã nhận diện ảnh: " + (i + 1);
+        statusLabel.innerText = "Đã nhận diện: Ảnh " + (i + 1);
         statusLabel.style.borderColor = "#e91e63";
         
         videoEl.muted = false;
@@ -160,10 +154,8 @@
       setTimeout(() => { startOverlay.style.display = "none"; }, 400);
       statusLabel.style.display = "block";
       
-      // Kích hoạt hệ thống AR
       sceneEl.systems["mindar-image-system"].start();
       
-      // Pre-load video
       videoEl.load();
       videoEl.play().then(() => {
         videoEl.pause();
@@ -172,7 +164,7 @@
     });
 
     sceneEl.addEventListener("arError", () => {
-      statusLabel.innerText = "Lỗi khởi tạo: Kiểm tra Camera và HTTPS!";
+      statusLabel.innerText = "Lỗi khởi tạo AR!";
       statusLabel.style.background = "#d32f2f";
     });
   </script>
