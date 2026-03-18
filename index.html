@@ -16,43 +16,7 @@
       background-color: #000;
     }
 
-    #ui-overlay {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: #000;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      transition: opacity 0.3s ease;
-    }
-
-    #start-btn {
-      padding: 15px 40px;
-      font-size: 18px;
-      font-weight: bold;
-      color: white;
-      background: #e91e63;
-      border: none;
-      border-radius: 50px;
-      cursor: pointer;
-      display: none;
-    }
-
-    .loader {
-      border: 3px solid #222;
-      border-top: 3px solid #e91e63;
-      border-radius: 50%;
-      width: 35px;
-      height: 35px;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 15px;
-    }
-
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
+    /* Thanh thông báo nhỏ phía trên, không chặn màn hình */
     #scanning-status {
       position: absolute;
       top: 20px;
@@ -64,29 +28,22 @@
       border-radius: 20px;
       font-size: 13px;
       z-index: 100;
-      display: none;
       border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
 
-  <div id="ui-overlay">
-    <div class="loader" id="loader-icon"></div>
-    <div id="status-text" style="margin-bottom: 20px;">Đang tải dữ liệu...</div>
-    <button id="start-btn">BẮT ĐẦU</button>
-  </div>
-
-  <div id="scanning-status">Đang tìm hình ảnh...</div>
+  <div id="scanning-status">Đang khởi tạo AR...</div>
 
   <!-- 
-    TỐI ƯU: 
-    - filterMinCF, filterBeta: Giảm độ trễ khi khớp ảnh.
-    - warmUpTolerance: Tăng tốc độ khởi động camera.
-    - missTolerance: Giúp video không bị mất ngay lập tức khi tay rung nhẹ.
+    - autoStart: true để bỏ qua bước nhấn nút
+    - uiScanning: no để ẩn giao diện quét mặc định của thư viện
   -->
   <a-scene 
-    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiScanning: no; maxTrack: 1; filterMinCF: 0.1; filterBeta: 10;" 
+    mindar-image="imageTargetSrc: targets.mind; autoStart: true; uiLoading: no; uiScanning: no; maxTrack: 1; filterMinCF: 0.1; filterBeta: 10;" 
     color-space="sRGB" 
     renderer="colorManagement: true, antialias: false, precision: medium;" 
     vr-mode-ui="enabled: false" 
@@ -112,8 +69,9 @@
     const sceneEl = document.querySelector('a-scene');
     const videoEl = document.querySelector('#ar-video');
     const container = document.querySelector('#targets-container');
+    const statusLabel = document.querySelector("#scanning-status");
 
-    // Tạo nhanh 28 target bằng DocumentFragment để tối ưu DOM
+    // Tạo nhanh 28 target
     const fragment = document.createDocumentFragment();
     for (let i = 0; i < TOTAL_IMAGES; i++) {
       const target = document.createElement('a-entity');
@@ -122,36 +80,37 @@
       const plane = document.createElement('a-video');
       plane.setAttribute('src', '#ar-video');
       plane.setAttribute('width', '1');
-      plane.setAttribute('height', '1.5'); // Khổ dọc ảnh Hồng Hạnh
+      plane.setAttribute('height', '1.5'); 
       
       target.appendChild(plane);
 
       target.addEventListener("targetFound", () => {
         videoEl.play();
-        document.querySelector("#scanning-status").innerText = "Đã nhận diện!";
+        statusLabel.innerText = "Đã nhận diện!";
+        statusLabel.style.background = "rgba(0, 200, 0, 0.6)";
       });
 
       target.addEventListener("targetLost", () => {
         videoEl.pause();
-        document.querySelector("#scanning-status").innerText = "Đang tìm hình ảnh...";
+        statusLabel.innerText = "Đang tìm hình ảnh...";
+        statusLabel.style.background = "rgba(0, 0, 0, 0.6)";
       });
 
       fragment.appendChild(target);
     }
     container.appendChild(fragment);
 
+    // Khi hệ thống đã sẵn sàng hoàn toàn
     sceneEl.addEventListener("ready", () => {
-      document.querySelector("#loader-icon").style.display = "none";
-      document.querySelector("#status-text").innerText = "Sẵn sàng!";
-      document.querySelector("#start-btn").style.display = "block";
+      statusLabel.innerText = "Đang quét tìm hình ảnh...";
+      // Tự động load video vào bộ nhớ đệm
+      videoEl.load();
     });
 
-    document.querySelector("#start-btn").addEventListener("click", () => {
-      document.querySelector("#ui-overlay").style.display = "none";
-      document.querySelector("#scanning-status").style.display = "block";
-      sceneEl.systems["mindar-image-system"].start();
-      // Mẹo: play rồi pause ngay để video sẵn sàng trong bộ nhớ đệm
-      videoEl.play().then(() => videoEl.pause());
+    // Xử lý lỗi nếu không tải được camera hoặc data
+    sceneEl.addEventListener("arError", () => {
+      statusLabel.innerText = "Lỗi khởi tạo AR. Vui lòng kiểm tra camera/HTTPS.";
+      statusLabel.style.background = "rgba(200, 0, 0, 0.6)";
     });
   </script>
 </body>
