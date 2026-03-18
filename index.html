@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
+</head>
+
+<body style="margin:0">
+
+<a-scene 
+  mindar-image="imageTargetSrc: target.mind; maxTrack: 1"
+  embedded
+  color-space="sRGB"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+>
+
+<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+<!-- CHỈ 1 TARGET -->
+<a-entity mindar-image-target="targetIndex: 0">
+  <a-video 
+    src="#video"
+    width="1"
+    height="0.6"
+    position="0 0 0">
+  </a-video>
+</a-entity>
+
+</a-scene>
+
+<!-- video -->
+<video id="video" src="video.mp4" autoplay loop muted playsinline></video>
+
+</body>
+</html>
