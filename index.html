@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Siêu Tốc - 28 Ảnh</title>
+  <title>AR Siêu Tốc - Đồng Nhất Tỉ Lệ</title>
   
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
@@ -16,11 +16,11 @@
       background-color: #000;
     }
 
-    /* Màn hình bắt đầu bắt buộc để kích hoạt Video/Âm thanh */
+    /* Màn hình bắt đầu */
     #start-overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.9);
       z-index: 10000;
       display: flex;
       flex-direction: column;
@@ -38,6 +38,7 @@
       border-radius: 50px;
       color: white;
       font-weight: bold;
+      box-shadow: 0 4px 15px rgba(233, 30, 99, 0.4);
     }
 
     #scanning-status {
@@ -53,7 +54,6 @@
       z-index: 100;
       border: 1px solid rgba(255,255,255,0.1);
       backdrop-filter: blur(4px);
-      pointer-events: none;
       display: none;
     }
   </style>
@@ -61,11 +61,11 @@
 <body>
 
   <div id="start-overlay">
-    <p style="margin-bottom: 20px;">Chạm để bắt đầu trải nghiệm AR</p>
+    <p style="margin-bottom: 20px;">Chạm để đồng bộ và bắt đầu AR</p>
     <button id="start-btn">BẮT ĐẦU</button>
   </div>
 
-  <div id="scanning-status">Đang khởi tạo AR...</div>
+  <div id="scanning-status">Đang quét ảnh...</div>
 
   <a-scene 
     mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiLoading: no; uiScanning: no; maxTrack: 1; filterMinCF: 0.1; filterBeta: 10;" 
@@ -75,7 +75,6 @@
     device-orientation-permission-ui="enabled: false">
     
     <a-assets>
-      <!-- Chú ý: Đảm bảo file video.mp4 tồn tại -->
       <video id="ar-video" 
              src="video.mp4" 
              crossorigin="anonymous" 
@@ -98,7 +97,11 @@
     const statusLabel = document.querySelector("#scanning-status");
     const startOverlay = document.querySelector("#start-overlay");
 
-    // Tạo 28 target
+    // Tỉ lệ cố định cho toàn bộ 28 tấm (Dựa trên ảnh Hồng Hạnh)
+    const FIXED_WIDTH = 1;
+    const FIXED_HEIGHT = 1.5; 
+
+    // Tạo 28 target đồng nhất
     const fragment = document.createDocumentFragment();
     for (let i = 0; i < TOTAL_IMAGES; i++) {
       const target = document.createElement('a-entity');
@@ -106,10 +109,17 @@
       
       const plane = document.createElement('a-video');
       plane.setAttribute('src', '#ar-video');
-      plane.setAttribute('width', '1');
-      plane.setAttribute('height', '1.5'); 
-      // Đẩy video lên trên mặt ảnh một chút để tránh lỗi hiển thị đè nhau
-      plane.setAttribute('position', '0 0 0.01'); 
+      
+      // THIẾT LẬP ĐỒNG NHẤT:
+      // Width và Height cố định để không bị to nhỏ khác nhau
+      plane.setAttribute('width', FIXED_WIDTH);
+      plane.setAttribute('height', FIXED_HEIGHT); 
+      
+      // Nếu bạn muốn video to hơn nữa cho cả 28 tấm, tăng số 1 ở scale bên dưới
+      plane.setAttribute('scale', '1 1 1'); 
+      
+      // Đẩy nhẹ lên trên mặt ảnh để tránh lỗi nhấp nháy (z-fighting)
+      plane.setAttribute('position', '0 0 0.02'); 
       
       target.appendChild(plane);
 
@@ -129,27 +139,19 @@
     }
     container.appendChild(fragment);
 
-    // Kích hoạt AR khi người dùng chạm vào màn hình
     startOverlay.addEventListener("click", () => {
       startOverlay.style.display = "none";
       statusLabel.style.display = "block";
-      
-      // Khởi động hệ thống AR
       sceneEl.systems["mindar-image-system"].start();
       
-      // Buộc video phải load và thử play/pause để xin quyền âm thanh
+      // Kích hoạt video
       videoEl.play().then(() => {
         videoEl.pause();
-      }).catch(e => console.log("Chờ nhận diện để phát"));
+      }).catch(e => console.log("Sẵn sàng phát"));
     });
 
     sceneEl.addEventListener("ready", () => {
-      statusLabel.innerText = "Sẵn sàng quét!";
-    });
-
-    sceneEl.addEventListener("arError", () => {
-      statusLabel.innerText = "Lỗi Camera. Hãy dùng HTTPS!";
-      statusLabel.style.background = "rgba(200, 0, 0, 0.6)";
+      statusLabel.innerText = "Sẵn sàng quét 28 ảnh!";
     });
   </script>
 </body>
