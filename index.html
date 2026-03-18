@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Siêu Tốc - Fix Lỗi Lệch Hình</title>
+  <title>AR Siêu Tốc - Fix Lỗi Ảnh 26</title>
   
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
@@ -72,13 +72,13 @@
   <div id="scanning-status">Đang quét tìm hình ảnh...</div>
 
   <!-- 
-    ĐIỀU CHỈNH CHỐNG RUNG CÂN BẰNG:
-    - filterMinCF: 0.001 (Tăng nhẹ để video bám sát ảnh hơn, giảm độ trễ)
-    - filterBeta: 10 (Giảm để tránh hiệu ứng video "đuổi theo" ảnh quá chậm)
-    - warmupTolerance: 7 (Đợi nhận diện ổn định trong 7 khung hình mới hiện video)
+    CẢI TIẾN CHỐNG RUNG CHO ẢNH LỖI (ẢNH 26):
+    - filterMinCF: Giảm xuống 0.0005 để triệt tiêu rung lắc li ti.
+    - filterBeta: Tăng lên 100 để video bám chắc hơn vào bề mặt.
+    - missTolerance: Tăng lên 15 để giữ video ổn định khi góc nhìn thay đổi.
   -->
   <a-scene 
-    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiLoading: no; uiScanning: no; maxTrack: 1; filterMinCF: 0.001; filterBeta: 10; warmupTolerance: 7; missTolerance: 10;" 
+    mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiLoading: no; uiScanning: no; maxTrack: 1; filterMinCF: 0.0005; filterBeta: 100; warmupTolerance: 5; missTolerance: 15;" 
     color-space="sRGB" 
     renderer="colorManagement: true, antialias: true, precision: high, logarithmicDepthBuffer: true;" 
     vr-mode-ui="enabled: false" 
@@ -118,12 +118,10 @@
       const videoPlane = document.createElement('a-video');
       videoPlane.setAttribute('src', '#ar-video');
       
-      /* QUAN TRỌNG: Không ép cứng chiều cao quá nhiều. 
-         Chúng ta sử dụng width=1 làm chuẩn, height sẽ tự thích ứng theo tỷ lệ ảnh mục tiêu 
-         được định nghĩa trong file .mind
-      */
+      // THAY ĐỔI: Sử dụng kích thước mặc định và chỉ scale nhẹ
+      // Thay vì ép height 1.45, ta để nó linh hoạt hơn hoặc khớp với đa số ảnh portrait
       videoPlane.setAttribute('width', '1');
-      videoPlane.setAttribute('height', '1.45'); // Tỉ lệ xấp xỉ Portrait
+      videoPlane.setAttribute('height', '1.48'); 
       videoPlane.setAttribute('position', '0 0 0.01'); 
       
       targetEntity.appendChild(videoPlane);
